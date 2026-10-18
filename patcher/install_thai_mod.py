@@ -18,7 +18,8 @@ ROOT = os.path.dirname(HERE)
 TR = os.path.join(ROOT, 'translations')
 
 FILES = ['Emperor.exe', 'EmperorText.eng', 'EmperorMM.eng',
-         os.path.join('DATA', 'China_Fonts.sg3'), os.path.join('DATA', 'China_Fonts.555')]
+         os.path.join('DATA', 'China_Fonts.sg3'), os.path.join('DATA', 'China_Fonts.555'),
+         os.path.join('Model', 'EmperorEventmsg.txt'), os.path.join('Model', 'Proverbs.txt')]
 
 # ----------------------------------------------------------------------------
 # Thai text encoder (Unicode Thai -> the game's single-byte Thai code page)
@@ -141,6 +142,32 @@ def build_mm(src):
 
 
 # ----------------------------------------------------------------------------
+# Model\EmperorEventmsg.txt (event / advisor messages) and Model\Proverbs.txt
+# ----------------------------------------------------------------------------
+def build_eventmsg(src):
+    import re
+    tr = load_tr('EmperorEventmsg.th.json')
+    out = []
+    for line in open(src, 'rb').read().split(b'\r\n'):
+        m = re.match(rb'(\s*)(PHRASE_\S+)(\s+)"(.*)"(\s*)$', line)
+        if m:
+            key = m.group(2).decode('ascii')
+            if key in tr:
+                line = m.group(1) + m.group(2) + m.group(3) + b'"' + encode(tr[key]) + b'"' + m.group(5)
+        out.append(line)
+    return b'\r\n'.join(out)
+
+
+def build_proverbs(src):
+    tr = load_tr('Proverbs.th.json')
+    out = []
+    for i, line in enumerate(open(src, 'rb').read().split(b'\r\n')):
+        key = 'P%d' % i
+        out.append(encode(tr[key]) if key in tr else line)
+    return b'\r\n'.join(out)
+
+
+# ----------------------------------------------------------------------------
 # China_Fonts.sg3 / .555 : append 108 Thai glyphs to each of the 30 fonts
 # ----------------------------------------------------------------------------
 def build_fonts(sg_path, px_path):
@@ -228,7 +255,9 @@ def main():
     txt = build_text(src('EmperorText.eng'))
     mm = build_mm(src('EmperorMM.eng'))
     sg, px = build_fonts(src(FILES[3]), src(FILES[4]))
-    for f, data in zip(FILES, (exe, txt, mm, sg, px)):
+    ev = build_eventmsg(src(FILES[5]))
+    pv = build_proverbs(src(FILES[6]))
+    for f, data in zip(FILES, (exe, txt, mm, sg, px, ev, pv)):
         open(os.path.join(game, f), 'wb').write(data)
     print('Thai mod installed! / ติดตั้ง mod ภาษาไทยเรียบร้อย')
 
